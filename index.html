@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Disney Character Search</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+      integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+      crossorigin="anonymous"
+    />
+    <style>
+      /* Custom styles */
+      .image-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .character-card {
+        width: 20%; /* Adjust card width as needed */
+        margin: 10px;
+        cursor: pointer;
+      }
+
+      .character-card .card-body {
+        height: auto; /* Adjust height as needed */
+        overflow: hidden;
+      }
+
+      .character-card .card-body p {
+        margin-bottom: 0; /* Remove bottom margin for paragraphs */
+      }
+
+      .pagination {
+        justify-content: center;
+      }
+    </style>
+    <!-- JavaScript -->
+    <script
+      src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+      integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
+      integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
+      integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const characterContainer =
+          document.getElementById("characterContainer");
+        const characterModal = document.getElementById("characterModal");
+        const characterDetails = document.getElementById("characterDetails");
+        const searchInput = document.getElementById("searchInput");
+        const autocompleteList = document.getElementById("autocompleteList");
+        const pagination = document.getElementById("pagination");
+        let characters = [];
+        let currentPage = 1;
+        let totalPages = 0;
+
+        // Function to fetch characters from the API
+        function fetchCharacters(page) {
+          const pageSize = 10; // Number of characters per page
+          const apiUrl = `https://api.disneyapi.dev/character?page=${page}&pageSize=${pageSize}`;
+          fetch(apiUrl)
+            .then((response) => response.json())
+            .then((data) => {
+              characters = data.data;
+              totalPages = data.info.totalPages;
+              displayCharacters(characters);
+              displayPagination(totalPages);
+            })
+            .catch((error) =>
+              console.error("Error fetching characters:", error)
+            );
+        }
+
+        // Function to display characters
+        function displayCharacters(characters) {
+          characterContainer.innerHTML = "";
+          characters.forEach((character) => {
+            const card = `<div class="card character-card">
+                            <img src="${character.imageUrl}" class="card-img-top" alt="${character.name}">
+                            <div class="card-body">
+                                <h5 class="card-title">${character.name}</h5>
+                                <button class="btn btn-primary" onclick="showCharacterDetails('${character._id}')">View Details</button>
+                            </div>
+                        </div>`;
+            characterContainer.insertAdjacentHTML("beforeend", card);
+          });
+        }
+
+        // Function to display pagination
+        function displayPagination(totalPages) {
+          pagination.innerHTML = "";
+
+          const maxPagesToShow = 5; // Maximum number of pages to show in pagination
+
+          const startPage = Math.max(
+            1,
+            currentPage - Math.floor(maxPagesToShow / 2)
+          );
+          const endPage = Math.min(startPage + maxPagesToShow - 1, totalPages);
+
+          // Previous button
+          const prevButton = createPaginationButton(
+            "Previous",
+            currentPage - 1
+          );
+          pagination.appendChild(prevButton);
+
+          // Page buttons
+          for (let i = startPage; i <= endPage; i++) {
+            const pageButton = createPaginationButton(i, i);
+            if (i === currentPage) {
+              pageButton.classList.add("active");
+            }
+            pagination.appendChild(pageButton);
+          }
+
+          // Next button
+          const nextButton = createPaginationButton("Next", currentPage + 1);
+          pagination.appendChild(nextButton);
+        }
+
+        // Helper function to create pagination buttons
+        function createPaginationButton(label, page) {
+          const li = document.createElement("li");
+          li.classList.add("page-item");
+          const button = document.createElement("button");
+          button.classList.add("page-link");
+          button.textContent = label;
+          button.onclick = () => {
+            if (page >= 1 && page <= totalPages) {
+              currentPage = page;
+              fetchCharacters(currentPage);
+            }
+          };
+          li.appendChild(button);
+          return li;
+        }
+
+        // Show character details modal
+        function showCharacterDetails(characterId) {
+          const character = characters.find((char) => char._id === characterId);
+          if (character) {
+            characterDetails.innerHTML = `
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="characterModalLabel">
+                Character Details
+              </h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <img src="${character.imageUrl}" class="img-fluid" alt="${
+              character.name
+            }">
+              <p>Name: ${character.name}</p>
+              <p>Films: ${character.films.join(", ")}</p>
+              <p>TV Shows: ${character.tvShows.join(", ")}</p>
+              <p>Video Games: ${character.videoGames.join(", ")}</p>
+              <p>Park Attractions: ${character.parkAttractions.join(", ")}</p>
+              <p>Allies: ${character.allies.join(", ")}</p>
+              <p>Enemies: ${character.enemies.join(", ")}</p>
+              <a href="${character.sourceUrl}" target="_blank">More details</a>
+            </div>
+          </div>
+        </div>
+      `;
+            $("#characterModal").modal("show"); // Show the modal using jQuery
+          }
+        }
+
+        // Initial fetching of characters
+        fetchCharacters(currentPage);
+
+        // Search characters with auto-suggestion
+        searchInput.addEventListener("input", () => {
+          const searchTerm = searchInput.value.toLowerCase();
+          const matchedCharacters = characters.filter((character) =>
+            character.name.toLowerCase().includes(searchTerm)
+          );
+          displayCharacters(matchedCharacters);
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="text-center">Search Disney Characters</h1>
+      <div class="search-form text-center mb-4">
+        <input
+          type="text"
+          id="searchInput"
+          class="form-control"
+          placeholder="Enter character name"
+        />
+        <div class="autocomplete-dropdown">
+          <ul id="autocompleteList" class="list-group"></ul>
+        </div>
+        <button id="searchButton" class="btn btn-primary mt-2">Search</button>
+      </div>
+      <div class="image-container" id="characterContainer"></div>
+
+      <!-- Modal for character details -->
+      <div
+        class="modal fade"
+        id="characterModal"
+        tabindex="-1"
+        aria-labelledby="characterModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header border-success">
+              <h5 class="modal-title" id="characterModalLabel">
+                Character Details
+              </h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body" id="characterDetails"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <nav aria-label="Page navigation">
+        <ul class="pagination" id="pagination"></ul>
+      </nav>
+    </div>
+    <div class="card-footer bg-transparent border-success text-center">
+      Made With ❤️. Special thanks to
+      <a href="https://github.com/ManuCastrillonM">Manu Castrillon</a>
+    </div>
+  </body>
+</html>
